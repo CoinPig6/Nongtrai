@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -36,14 +37,14 @@
       border-radius: 10px;
     }
 
-    /* Viền Luống Đất (Thu nhỏ độ dày viền từ 4px xuống 2px/3px trên mobile để tăng diện tích đất) */
-    .plot-lv1 { border: 2.5px solid #a16207; border-radius: 14px; } 
-    .plot-lv2 { border: 2.5px solid #4d7c0f; box-shadow: 0 0 8px rgba(77, 124, 15, 0.4); border-radius: 14px; } 
-    .plot-lv3 { border: 2.5px solid #059669; box-shadow: 0 0 12px rgba(5, 150, 105, 0.6); border-radius: 14px; } 
+    /* Viền Luống Đất cứng cáp */
+    .plot-lv1 { border: 3px solid #a16207; border-radius: 14px; } 
+    .plot-lv2 { border: 3px solid #4d7c0f; box-shadow: 0 0 10px rgba(77, 124, 15, 0.5); border-radius: 14px; } 
+    .plot-lv3 { border: 3px solid #059669; box-shadow: 0 0 14px rgba(5, 150, 105, 0.7); border-radius: 14px; } 
 
     /* Đất bị khoá */
     .plot-locked {
-      border: 2.5px solid #475569;
+      border: 3px solid #475569;
       border-radius: 14px;
       background: #334155;
     }
@@ -94,13 +95,13 @@
         <div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 border-4 border-gray-300 shadow-inner">
           <i class="ph-fill ph-lock-key text-2xl text-gray-500"></i>
         </div>
-        <h3 class="font-black text-xl text-gray-800 mb-1">Mở Rộng Đất</h3>
-        <p class="text-xs text-gray-500 mb-5 font-medium px-2">Đầu tư Đồng Vàng để khai hoang thêm luống đất màu mỡ mới!</p>
+        <h3 class="font-black text-xl text-gray-800 mb-1">Khai Hoang Đất</h3>
+        <p class="text-xs text-gray-500 mb-5 font-medium px-2">Đầu tư Đồng Vàng thu về từ việc bán nông sản để khai hoang thêm luống đất mới!</p>
         
         <button id="btn-unlock-plot" onclick="unlockCurrentPlot()" class="w-full relative overflow-hidden bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-xl p-3.5 shadow-md transition-all active:scale-95 group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed">
           <div class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
           <div class="flex items-center justify-center gap-1.5 relative z-10 text-base font-black drop-shadow-sm">
-            Khai hoang: <span id="unlock-cost">20</span> <i class="ph-fill ph-coin text-yellow-100"></i>
+            Khai hoang: <span id="unlock-cost">150</span> <i class="ph-fill ph-coin text-yellow-100"></i>
           </div>
         </button>
       </div>
@@ -133,17 +134,17 @@
         <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
           <div class="flex items-center gap-1.5 mb-2">
             <i class="ph-fill ph-spade text-[#b45309]"></i>
-            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider">Cải Tạo Luống</h4>
+            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider">Cải Tạo Luống Đất</h4>
           </div>
           
           <button id="btn-upgrade" onclick="upgradeCurrentPlot()" class="w-full relative overflow-hidden bg-gradient-to-br from-[#10b981] to-[#059669] text-white rounded-lg p-2.5 shadow-sm transition-all active:scale-[0.98] group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed">
             <div class="flex items-center justify-between relative z-10">
               <div class="flex flex-col text-left">
-                <span class="font-bold text-xs text-white" id="upgrade-title">Lên Phân Bón</span>
+                <span class="font-bold text-xs text-white" id="upgrade-title">Lên Luống Đất Phân Bón</span>
                 <span class="text-[9px] font-medium text-emerald-100" id="upgrade-desc">Nhanh hơn 20%</span>
               </div>
               <div class="flex items-center gap-1 bg-black/20 px-2 py-1 rounded font-black text-xs">
-                <span id="upgrade-cost">50</span> <i class="ph-fill ph-coin text-yellow-300"></i>
+                <span id="upgrade-cost">500</span> <i class="ph-fill ph-coin text-yellow-300"></i>
               </div>
             </div>
           </button>
@@ -214,10 +215,10 @@
       
       <!-- Hướng dẫn nhanh -->
       <div class="bg-white/60 backdrop-blur-sm px-4 py-2 rounded-xl border border-white shadow-sm flex items-center gap-1.5 text-[#047857] font-semibold text-xs">
-        <i class="ph-fill ph-cursor-click text-base animate-pulse"></i> Chạm vào ô đất để chăm sóc hoặc khai hoang luống mới.
+        <i class="ph-fill ph-cursor-click text-base animate-pulse"></i> Chạm vào ô đất để trồng hạt giống hoặc khai hoang luống đất mới.
       </div>
 
-      <!-- Mảnh đất (Grid 4x4) - Đã tối ưu hóa padding tối đa cho mobile -->
+      <!-- Mảnh đất (Grid 4x4) -->
       <div class="bg-[#d4d4d8] p-2 sm:p-5 rounded-2xl sm:rounded-[2.5rem] shadow-[inset_0_4px_10px_rgba(0,0,0,0.15)] relative border-2 sm:border-4 border-[#e4e4e7] w-full max-w-xl mx-auto">
         <div id="plots-container" class="grid grid-cols-4 gap-2 sm:gap-4 relative z-10">
           <!-- JS Render -->
@@ -273,19 +274,20 @@
     
     // --- DATA GAME ---
     const CROPS = {
-      wheat: { id: 'wheat', name: 'Lúa mì', icon: '🌾', growTime: 4000 },
-      tomato: { id: 'tomato', name: 'Cà chua', icon: '🍅', growTime: 8000 },
-      corn: { id: 'corn', name: 'Ngô', icon: '🌽', growTime: 15000 },
-      strawberry: { id: 'strawberry', name: 'Dâu tây', icon: '🍓', growTime: 30000 },
+      wheat: { id: 'wheat', name: 'Lúa mì', icon: '🌾', growTime: 15000 },          // 15 giây
+      tomato: { id: 'tomato', name: 'Cà chua', icon: '🍅', growTime: 300000 },       // 5 phút
+      corn: { id: 'corn', name: 'Ngô', icon: '🌽', growTime: 1800000 },            // 30 phút
+      strawberry: { id: 'strawberry', name: 'Dâu tây', icon: '🍓', growTime: 7200000 },  // 2 giờ
     };
 
     const UPGRADE_DATA = {
       1: { name: "Luống Đất Phù Sa", cost: null, bonusText: "Tốc độ mọc cơ bản" },
-      2: { name: "Luống Đất Phân Bón", cost: 50, bonusText: "Nhanh hơn 20%", timeMultiplier: 0.8 },
-      3: { name: "Luống Đất Sinh Học", cost: 150, bonusText: "Nhanh hơn 40%", timeMultiplier: 0.6 }
+      2: { name: "Luống Đất Phân Bón", cost: 500, bonusText: "Nhanh hơn 20%", timeMultiplier: 0.8 },
+      3: { name: "Luống Đất Sinh Học", cost: 2500, bonusText: "Nhanh hơn 40%", timeMultiplier: 0.6 }
     };
 
-    const getPlotUnlockCost = (index) => index * 20;
+    // Điều chỉnh giá mở khoá ô đất (phù hợp với thu hoạch Dâu tây 2000 vàng)
+    const getPlotUnlockCost = (index) => index * 150;
 
     const INITIAL_FARM = {
       silver: 200, 
@@ -300,7 +302,7 @@
     let farmData = JSON.parse(JSON.stringify(INITIAL_FARM));
     let activePlotIndex = null;
 
-    // Kéo thả thanh chọn hạt giống mượt mà
+    // Kéo thả chọn hạt giống
     function enableDragToScroll(slider) {
       let isDown = false;
       let startX, scrollLeft;
@@ -319,7 +321,24 @@
       });
     }
 
-    // --- KHỞI TẠO DOM MỘT LẦN ---
+    // Định dạng thời gian đếm ngược đẹp mắt
+    function formatTimeRemaining(ms) {
+      if (ms <= 0) return "Chín!";
+      const totalSecs = Math.floor(ms / 1000);
+      const hrs = Math.floor(totalSecs / 3600);
+      const mins = Math.floor((totalSecs % 3600) / 60);
+      const secs = totalSecs % 60;
+      
+      if (hrs > 0) {
+        return `Còn ${hrs}h ${mins}m`;
+      }
+      if (mins > 0) {
+        return `Còn ${mins}m ${secs}s`;
+      }
+      return `Còn ${secs}s`;
+    }
+
+    // --- KHỞI TẠO DOM ---
     function initDOM() {
       const container = document.getElementById('plots-container');
       container.innerHTML = '';
@@ -335,7 +354,7 @@
           <div class="soil-bg absolute inset-0 z-0"></div>
           <div class="absolute inset-0 opacity-20 soil-pattern z-0 pointer-events-none"></div>
           
-          <!-- Lớp khoá - Biểu tượng và chữ đã được thiết kế tinh giản hơn trên Mobile -->
+          <!-- Lớp khoá -->
           <div class="locked-overlay absolute inset-0 bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center z-30 transition-opacity hidden">
             <i class="ph-fill ph-lock-key text-xl sm:text-2xl text-gray-200 drop-shadow-md mb-0.5"></i>
             <div class="text-[8px] sm:text-[10px] font-black text-white bg-black/75 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
@@ -343,10 +362,15 @@
             </div>
           </div>
 
-          <!-- Lớp chứa Emoji Cây Trồng (Cân chỉnh size động) -->
+          <!-- Lớp chứa Emoji Cây Trồng -->
           <div class="emoji-container absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-300 text-3xl sm:text-4xl md:text-5xl z-10"></div>
           
-          <!-- Thanh tiến độ lớn nhưng cực mảnh -->
+          <!-- Nhãn đếm ngược thời gian lớn lên -->
+          <div class="time-label absolute text-[7px] sm:text-[9px] font-black text-white bg-black/75 px-1.5 py-0.5 rounded-md bottom-7 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none hidden border border-white/10 shadow-md">
+            Còn --:--
+          </div>
+
+          <!-- Thanh tiến độ mượt -->
           <div class="progress-wrapper absolute bottom-1.5 left-1.5 right-1.5 h-1.5 bg-black/70 rounded-full overflow-hidden border border-black/40 backdrop-blur-sm hidden z-20">
             <div class="progress-bar h-full bg-gradient-to-r from-[#10b981] to-[#34d399] w-0 relative"></div>
           </div>
@@ -378,16 +402,17 @@
     };
 
     function getPlotStatus(plot) {
-      if (!plot.isUnlocked) return { state: 'locked', progress: 0 };
-      if (plot.state === 'empty') return { state: 'empty', progress: 0 };
+      if (!plot.isUnlocked) return { state: 'locked', progress: 0, timeLeft: 0 };
+      if (plot.state === 'empty') return { state: 'empty', progress: 0, timeLeft: 0 };
       
       const cropData = CROPS[plot.crop];
       const multiplier = plot.level > 1 ? UPGRADE_DATA[plot.level].timeMultiplier : 1;
       const actualGrowTime = cropData.growTime * multiplier;
       const elapsed = Date.now() - plot.plantTime;
+      const timeLeft = Math.max(0, actualGrowTime - elapsed);
       
-      if (elapsed >= actualGrowTime) return { state: 'ready', crop: plot.crop, progress: 100 };
-      return { state: 'growing', crop: plot.crop, progress: Math.min(100, (elapsed / actualGrowTime) * 100) };
+      if (elapsed >= actualGrowTime) return { state: 'ready', crop: plot.crop, progress: 100, timeLeft: 0 };
+      return { state: 'growing', crop: plot.crop, progress: Math.min(100, (elapsed / actualGrowTime) * 100), timeLeft };
     }
 
     // --- CHỨC NĂNG NẠP TIỀN TEST ---
@@ -541,9 +566,14 @@
         
         const stateFingerprint = `${plot.isUnlocked}_${status.state}_${status.crop}_${plot.level}`;
 
+        // Cập nhật thanh tiến độ & nhãn đếm ngược
         if (status.state === 'growing') {
           const progBar = node.querySelector('.progress-bar');
           progBar.style.width = `${status.progress}%`;
+          
+          const timeLabel = node.querySelector('.time-label');
+          timeLabel.classList.remove('hidden');
+          timeLabel.innerText = formatTimeRemaining(status.timeLeft);
         }
 
         if (node.dataset.lastState !== stateFingerprint) {
@@ -553,6 +583,7 @@
             const progWrap = node.querySelector('.progress-wrapper');
             const glow = node.querySelector('.ready-glow');
             const lockedOverlay = node.querySelector('.locked-overlay');
+            const timeLabel = node.querySelector('.time-label');
 
             node.className = `plot-item cursor-pointer overflow-hidden transition-all duration-300`;
 
@@ -562,6 +593,7 @@
               emoji.innerHTML = '';
               progWrap.classList.add('hidden');
               glow.classList.add('hidden');
+              timeLabel.classList.add('hidden');
             } 
             else {
               node.classList.add(`plot-lv${plot.level}`, 'hover:-translate-y-1', 'shadow-sm', 'hover:shadow-md');
@@ -571,6 +603,7 @@
                 emoji.innerHTML = '';
                 progWrap.classList.add('hidden');
                 glow.classList.add('hidden');
+                timeLabel.classList.add('hidden');
                 node.classList.remove('animate-pulse');
               } 
               else if (status.state === 'growing') {
@@ -585,6 +618,7 @@
                 emoji.innerHTML = icon;
                 emoji.className = 'emoji-container absolute inset-0 flex items-center justify-center pointer-events-none text-4xl sm:text-5xl filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)] z-20 animate-pop';
                 glow.classList.remove('hidden', 'opacity-0');
+                timeLabel.classList.add('hidden');
                 node.classList.add('animate-pulse'); 
                 progWrap.classList.add('hidden');
               }
@@ -621,7 +655,7 @@
     async function saveToFirebase() {
       if (!user || !db) return;
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'nongtraiheocon';
-      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'farmData');
+      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'saveData', 'farm');
       try { await setDoc(docRef, farmData); } catch(e) {}
     }
 
@@ -645,7 +679,7 @@
         user = currentUser;
         if (user) {
           const appId = typeof __app_id !== 'undefined' ? __app_id : 'nongtraiheocon';
-          const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'farmData');
+          const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'saveData', 'farm');
           
           onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
