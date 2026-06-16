@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nông Trại Heo Con - Vườn</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      overflow-y: scroll;
+      background-color: #ecfdf5;
+      background-image: radial-gradient(#d1fae5 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    
+    .plot-item {
+      aspect-ratio: 1 / 1;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+      position: relative;
+    }
+    
+    /* Thiết kế nền đất */
+    .soil-bg {
+      background: #713f12;
+      box-shadow: inset 0 6px 12px rgba(0,0,0,0.4), inset 0 -3px 8px rgba(113, 63, 18, 0.8);
+      border-radius: 10px;
+    }
+    .soil-pattern {
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.1) 6px, rgba(0,0,0,0.1) 12px);
+      border-radius: 10px;
+    }
+
+    /* Viền Luống Đất (Thu nhỏ độ dày viền từ 4px xuống 2px/3px trên mobile để tăng diện tích đất) */
+    .plot-lv1 { border: 2.5px solid #a16207; border-radius: 14px; } 
+    .plot-lv2 { border: 2.5px solid #4d7c0f; box-shadow: 0 0 8px rgba(77, 124, 15, 0.4); border-radius: 14px; } 
+    .plot-lv3 { border: 2.5px solid #059669; box-shadow: 0 0 12px rgba(5, 150, 105, 0.6); border-radius: 14px; } 
+
+    /* Đất bị khoá */
+    .plot-locked {
+      border: 2.5px solid #475569;
+      border-radius: 14px;
+      background: #334155;
+    }
+    .plot-locked .soil-bg, .plot-locked .soil-pattern {
+      opacity: 0.25;
+      filter: grayscale(1);
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.6); opacity: 0; }
+      70% { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+
+    .swipe-container {
+      -ms-overflow-style: none; scrollbar-width: none;
+    }
+    .swipe-container::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="text-gray-800 font-sans pb-20 md:pb-0 min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 z-[60] bg-gray-900/95 text-white px-5 py-2.5 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.25)] font-bold text-xs sm:text-sm flex items-center gap-2.5 border border-gray-700 opacity-0 pointer-events-none transition-all duration-300 translate-y-[-15px]">
+    <i class="ph-fill ph-bell-ringing text-yellow-400 text-lg"></i>
+    <span id="toast-msg">Thông báo</span>
+  </div>
+
+  <!-- Modal Hành Động -->
+  <div id="action-modal" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 px-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeModal()"></div>
+    
+    <div class="bg-[#fdfbf7] rounded-[1.8rem] shadow-2xl p-5 relative z-10 w-full max-w-sm border-4 border-[#e5e0d8] transform scale-95 transition-transform duration-300" id="action-modal-content">
+      
+      <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 bg-[#e5e0d8] hover:bg-[#d4cebd] rounded-full flex items-center justify-center text-gray-600 transition-colors z-20">
+        <i class="ph ph-x font-bold"></i>
+      </button>
+
+      <!-- VÙNG 1: GIAO DIỆN MỞ KHOÁ ĐẤT -->
+      <div id="modal-unlock-ui" class="hidden text-center py-2">
+        <div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 border-4 border-gray-300 shadow-inner">
+          <i class="ph-fill ph-lock-key text-2xl text-gray-500"></i>
+        </div>
+        <h3 class="font-black text-xl text-gray-800 mb-1">Mở Rộng Đất</h3>
+        <p class="text-xs text-gray-500 mb-5 font-medium px-2">Đầu tư Đồng Vàng để khai hoang thêm luống đất màu mỡ mới!</p>
+        
+        <button id="btn-unlock-plot" onclick="unlockCurrentPlot()" class="w-full relative overflow-hidden bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-xl p-3.5 shadow-md transition-all active:scale-95 group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed">
+          <div class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+          <div class="flex items-center justify-center gap-1.5 relative z-10 text-base font-black drop-shadow-sm">
+            Khai hoang: <span id="unlock-cost">20</span> <i class="ph-fill ph-coin text-yellow-100"></i>
+          </div>
+        </button>
+      </div>
+
+      <!-- VÙNG 2: GIAO DIỆN TRỒNG TRỌT & NÂNG CẤP -->
+      <div id="modal-farming-ui">
+        <div class="mb-4 border-b-2 border-[#e5e0d8] pb-2.5 pr-8">
+          <h3 class="font-black text-lg text-[#78350f]">Gieo Hạt & Cải Tạo</h3>
+          <p class="text-[10px] text-[#92400e] font-semibold mt-1 bg-[#fef3c7] inline-block px-2 py-0.5 rounded border border-[#fde68a]" id="modal-plot-info">
+            Luống Đất Phù Sa
+          </p>
+        </div>
+
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5">
+              <i class="ph-fill ph-plant text-[#059669]"></i>
+              <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider">Chọn Hạt Giống</h4>
+            </div>
+            <div class="flex items-center gap-1 text-[10px] font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 border border-gray-200">
+              <span id="modal-silver-display">0</span> <i class="ph-fill ph-coin text-gray-400"></i>
+            </div>
+          </div>
+          
+          <div id="modal-seeds-container" class="flex gap-2 overflow-x-auto snap-x swipe-container py-1.5 pb-3 -mx-1 px-1">
+            <!-- JS Render -->
+          </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+          <div class="flex items-center gap-1.5 mb-2">
+            <i class="ph-fill ph-spade text-[#b45309]"></i>
+            <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider">Cải Tạo Luống</h4>
+          </div>
+          
+          <button id="btn-upgrade" onclick="upgradeCurrentPlot()" class="w-full relative overflow-hidden bg-gradient-to-br from-[#10b981] to-[#059669] text-white rounded-lg p-2.5 shadow-sm transition-all active:scale-[0.98] group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed">
+            <div class="flex items-center justify-between relative z-10">
+              <div class="flex flex-col text-left">
+                <span class="font-bold text-xs text-white" id="upgrade-title">Lên Phân Bón</span>
+                <span class="text-[9px] font-medium text-emerald-100" id="upgrade-desc">Nhanh hơn 20%</span>
+              </div>
+              <div class="flex items-center gap-1 bg-black/20 px-2 py-1 rounded font-black text-xs">
+                <span id="upgrade-cost">50</span> <i class="ph-fill ph-coin text-yellow-300"></i>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm px-3 py-2.5 sm:px-4 sm:py-3">
+    <div class="max-w-5xl mx-auto flex justify-between items-center gap-2">
+      <!-- Logo -->
+      <div class="flex items-center gap-1.5 text-emerald-800 font-black text-lg sm:text-2xl tracking-tight shrink-0">
+        <div class="bg-gradient-to-br from-[#10b981] to-[#047857] text-white p-1 sm:p-1.5 rounded-lg shadow-sm border border-[#059669]">
+          <i class="ph-fill ph-plant text-lg sm:text-xl"></i>
+        </div>
+        <span>Heo Con</span>
+      </div>
+      
+      <!-- Box Tiền Tệ -->
+      <div class="flex items-center gap-2 shrink-0">
+        <!-- Đồng Bạc -->
+        <div class="flex items-center bg-gray-50 border border-gray-200 rounded-full shadow-inner p-0.5 pl-2.5 pr-0.5 gap-1.5">
+          <div class="flex items-center gap-1">
+            <i class="ph-fill ph-coin text-gray-400 text-base sm:text-lg"></i>
+            <span id="silver-display" class="text-xs sm:text-sm font-black text-gray-600">0</span>
+          </div>
+          <button onclick="topUpSilver()" class="bg-[#10b981] hover:bg-[#059669] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm transition-colors flex items-center gap-0.5 border border-emerald-600">
+            <i class="ph-bold ph-plus"></i><span>Nạp</span>
+          </button>
+        </div>
+
+        <!-- Đồng Vàng -->
+        <div class="flex items-center gap-1 bg-gradient-to-r from-[#fef08a] to-[#fde047] px-2.5 py-1 rounded-full font-black text-[#854d0e] shadow-sm border border-[#facc15] text-xs sm:text-sm">
+          <i class="ph-fill ph-coin text-[#ca8a04] text-base sm:text-lg animate-float"></i>
+          <span id="gold-display">0</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="max-w-5xl mx-auto p-2 sm:p-4 md:py-8 flex flex-col md:flex-row gap-6 flex-1 w-full">
+    
+    <!-- Sidebar Desktop -->
+    <div class="hidden md:flex flex-col gap-3 sticky top-24 h-fit w-64 shrink-0">
+      <a href="index.html" class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-lg shadow-emerald-500/30 scale-[1.02]">
+        <i class="ph-fill ph-plant text-2xl"></i> Khu Vườn
+      </a>
+      <a href="cuahang.html" class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold bg-white/80 text-emerald-800 hover:bg-white border border-transparent hover:border-emerald-100 shadow-sm">
+        <i class="ph-fill ph-storefront text-2xl text-blue-500"></i> Cửa Hàng
+      </a>
+      <a href="kho.html" class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold bg-white/80 text-emerald-800 hover:bg-white border border-transparent hover:border-emerald-100 shadow-sm">
+        <i class="ph-fill ph-backpack text-2xl text-orange-500"></i> Kho Nông Sản
+      </a>
+      <a href="tintuc.html" class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold bg-white/80 text-emerald-800 hover:bg-white border border-transparent hover:border-emerald-100 shadow-sm">
+        <i class="ph-fill ph-newspaper text-2xl text-indigo-500"></i> Bảng Tin
+      </a>
+      <div class="h-px bg-emerald-200/50 my-2"></div>
+      <a href="taikhoan.html" class="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold bg-white/80 text-emerald-800 hover:bg-white border border-transparent hover:border-emerald-100 shadow-sm">
+        <i class="ph-fill ph-user text-2xl text-gray-500"></i> Hồ Sơ
+      </a>
+    </div>
+
+    <!-- Nội dung Tab Vườn -->
+    <div class="w-full flex-1 flex flex-col gap-4" id="garden-content">
+      
+      <!-- Hướng dẫn nhanh -->
+      <div class="bg-white/60 backdrop-blur-sm px-4 py-2 rounded-xl border border-white shadow-sm flex items-center gap-1.5 text-[#047857] font-semibold text-xs">
+        <i class="ph-fill ph-cursor-click text-base animate-pulse"></i> Chạm vào ô đất để chăm sóc hoặc khai hoang luống mới.
+      </div>
+
+      <!-- Mảnh đất (Grid 4x4) - Đã tối ưu hóa padding tối đa cho mobile -->
+      <div class="bg-[#d4d4d8] p-2 sm:p-5 rounded-2xl sm:rounded-[2.5rem] shadow-[inset_0_4px_10px_rgba(0,0,0,0.15)] relative border-2 sm:border-4 border-[#e4e4e7] w-full max-w-xl mx-auto">
+        <div id="plots-container" class="grid grid-cols-4 gap-2 sm:gap-4 relative z-10">
+          <!-- JS Render -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bottom Nav Mobile -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex justify-around items-end pb-safe z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] px-1 pt-1.5">
+    <a href="index.html" class="relative flex flex-col items-center justify-center w-full py-2 mb-1 rounded-xl text-emerald-600 transition-all">
+      <div class="absolute inset-0 bg-emerald-50 rounded-xl -z-10 scale-95"></div>
+      <i class="ph-fill ph-plant text-2xl mb-0.5 -translate-y-0.5"></i>
+      <span class="text-[9px] font-black tracking-wide">Vườn</span>
+    </a>
+    <a href="cuahang.html" class="relative flex flex-col items-center justify-center w-full py-2 mb-1 rounded-xl text-gray-400 hover:text-blue-500 transition-all">
+      <i class="ph-fill ph-storefront text-2xl mb-0.5"></i>
+      <span class="text-[9px] font-black tracking-wide">Cửa Hàng</span>
+    </a>
+    <a href="kho.html" class="relative flex flex-col items-center justify-center w-full py-2 mb-1 rounded-xl text-gray-400 hover:text-orange-500 transition-all">
+      <i class="ph-fill ph-backpack text-2xl mb-0.5"></i>
+      <span class="text-[9px] font-black tracking-wide">Kho</span>
+    </a>
+    <a href="tintuc.html" class="relative flex flex-col items-center justify-center w-full py-2 mb-1 rounded-xl text-gray-400 hover:text-indigo-500 transition-all">
+      <i class="ph-fill ph-newspaper text-2xl mb-0.5"></i>
+      <span class="text-[9px] font-black tracking-wide">Tin Tức</span>
+    </a>
+    <a href="taikhoan.html" class="relative flex flex-col items-center justify-center w-full py-2 mb-1 rounded-xl text-gray-400 hover:text-gray-700 transition-all">
+      <i class="ph-fill ph-user text-2xl mb-0.5"></i>
+      <span class="text-[9px] font-black tracking-wide">Hồ Sơ</span>
+    </a>
+  </nav>
+
+  <!-- === LOGIC & FIREBASE === -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAQa6awFxFTOrRXPnda8rS6vlKLKPDMJT0",
+      authDomain: "nongtraiheocon.firebaseapp.com",
+      databaseURL: "https://nongtraiheocon-default-rtdb.firebaseio.com",
+      projectId: "nongtraiheocon",
+      storageBucket: "nongtraiheocon.firebasestorage.app",
+      messagingSenderId: "964519162656",
+      appId: "1:964519162656:web:27247ed6287dfc74ef5d45",
+      measurementId: "G-RT8HPTJERF"
+    };
+
+    let app, auth, db, user;
+    
+    // --- DATA GAME ---
+    const CROPS = {
+      wheat: { id: 'wheat', name: 'Lúa mì', icon: '🌾', growTime: 4000 },
+      tomato: { id: 'tomato', name: 'Cà chua', icon: '🍅', growTime: 8000 },
+      corn: { id: 'corn', name: 'Ngô', icon: '🌽', growTime: 15000 },
+      strawberry: { id: 'strawberry', name: 'Dâu tây', icon: '🍓', growTime: 30000 },
+    };
+
+    const UPGRADE_DATA = {
+      1: { name: "Luống Đất Phù Sa", cost: null, bonusText: "Tốc độ mọc cơ bản" },
+      2: { name: "Luống Đất Phân Bón", cost: 50, bonusText: "Nhanh hơn 20%", timeMultiplier: 0.8 },
+      3: { name: "Luống Đất Sinh Học", cost: 150, bonusText: "Nhanh hơn 40%", timeMultiplier: 0.6 }
+    };
+
+    const getPlotUnlockCost = (index) => index * 20;
+
+    const INITIAL_FARM = {
+      silver: 200, 
+      gold: 50,    
+      seeds: { wheat: 5, tomato: 2, corn: 0, strawberry: 0 },
+      harvested: { wheat: 0, tomato: 0, corn: 0, strawberry: 0 },
+      plots: Array(16).fill(null).map((_, index) => ({ 
+        state: 'empty', crop: null, plantTime: null, level: 1, isUnlocked: index === 0 ? true : false
+      }))
+    };
+
+    let farmData = JSON.parse(JSON.stringify(INITIAL_FARM));
+    let activePlotIndex = null;
+
+    // Kéo thả thanh chọn hạt giống mượt mà
+    function enableDragToScroll(slider) {
+      let isDown = false;
+      let startX, scrollLeft;
+      slider.addEventListener('mousedown', (e) => {
+        isDown = true;
+        startX = e.pageX - slider.offsetLeft;
+        scrollLeft = slider.scrollLeft;
+      });
+      slider.addEventListener('mouseleave', () => { isDown = false; });
+      slider.addEventListener('mouseup', () => { isDown = false; });
+      slider.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        slider.scrollLeft = scrollLeft - (x - startX) * 2;
+      });
+    }
+
+    // --- KHỞI TẠO DOM MỘT LẦN ---
+    function initDOM() {
+      const container = document.getElementById('plots-container');
+      container.innerHTML = '';
+      
+      for(let i=0; i<16; i++) {
+        const plotDiv = document.createElement('div');
+        plotDiv.className = 'plot-item cursor-pointer overflow-hidden shadow-sm bg-gray-800';
+        plotDiv.dataset.lastState = 'uninitialized';
+        plotDiv.onclick = () => handlePlotInteraction(i);
+        
+        plotDiv.innerHTML = `
+          <!-- Lớp đất cơ bản -->
+          <div class="soil-bg absolute inset-0 z-0"></div>
+          <div class="absolute inset-0 opacity-20 soil-pattern z-0 pointer-events-none"></div>
+          
+          <!-- Lớp khoá - Biểu tượng và chữ đã được thiết kế tinh giản hơn trên Mobile -->
+          <div class="locked-overlay absolute inset-0 bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center z-30 transition-opacity hidden">
+            <i class="ph-fill ph-lock-key text-xl sm:text-2xl text-gray-200 drop-shadow-md mb-0.5"></i>
+            <div class="text-[8px] sm:text-[10px] font-black text-white bg-black/75 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
+              ${getPlotUnlockCost(i)}<i class="ph-fill ph-coin text-yellow-400"></i>
+            </div>
+          </div>
+
+          <!-- Lớp chứa Emoji Cây Trồng (Cân chỉnh size động) -->
+          <div class="emoji-container absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-300 text-3xl sm:text-4xl md:text-5xl z-10"></div>
+          
+          <!-- Thanh tiến độ lớn nhưng cực mảnh -->
+          <div class="progress-wrapper absolute bottom-1.5 left-1.5 right-1.5 h-1.5 bg-black/70 rounded-full overflow-hidden border border-black/40 backdrop-blur-sm hidden z-20">
+            <div class="progress-bar h-full bg-gradient-to-r from-[#10b981] to-[#34d399] w-0 relative"></div>
+          </div>
+          
+          <!-- Hiệu ứng sáng khi chín -->
+          <div class="ready-glow absolute inset-0 bg-[#fef08a]/20 mix-blend-overlay opacity-0 transition-opacity hidden z-10 pointer-events-none"></div>
+        `;
+        container.appendChild(plotDiv);
+      }
+      updateCurrencyDisplay();
+      enableDragToScroll(document.getElementById('modal-seeds-container'));
+    }
+
+    // --- LOGIC TƯƠNG TÁC ---
+    window.handlePlotInteraction = function(index) {
+      const plot = farmData.plots[index];
+      if (!plot.isUnlocked) return openUnlockModal(index);
+
+      const status = getPlotStatus(plot);
+      if (status.state === 'ready') {
+        farmData.harvested[plot.crop]++;
+        farmData.plots[index] = { state: 'empty', crop: null, plantTime: null, level: plot.level, isUnlocked: true }; 
+        showToast(`Thu hoạch ${CROPS[plot.crop].name} thành công!`);
+        saveToFirebase();
+      } 
+      else if (status.state === 'empty') {
+        openActionModal(index);
+      }
+    };
+
+    function getPlotStatus(plot) {
+      if (!plot.isUnlocked) return { state: 'locked', progress: 0 };
+      if (plot.state === 'empty') return { state: 'empty', progress: 0 };
+      
+      const cropData = CROPS[plot.crop];
+      const multiplier = plot.level > 1 ? UPGRADE_DATA[plot.level].timeMultiplier : 1;
+      const actualGrowTime = cropData.growTime * multiplier;
+      const elapsed = Date.now() - plot.plantTime;
+      
+      if (elapsed >= actualGrowTime) return { state: 'ready', crop: plot.crop, progress: 100 };
+      return { state: 'growing', crop: plot.crop, progress: Math.min(100, (elapsed / actualGrowTime) * 100) };
+    }
+
+    // --- CHỨC NĂNG NẠP TIỀN TEST ---
+    window.topUpSilver = function() {
+      farmData.silver += 100;
+      updateCurrencyDisplay();
+      saveToFirebase();
+      showToast("Đã nạp 100 Đồng Bạc!");
+    };
+
+    // --- QUẢN LÝ MODAL ---
+    function openUnlockModal(index) {
+      activePlotIndex = index;
+      document.getElementById('modal-farming-ui').classList.add('hidden');
+      document.getElementById('modal-unlock-ui').classList.remove('hidden');
+
+      const cost = getPlotUnlockCost(index);
+      document.getElementById('unlock-cost').innerText = cost;
+      
+      const btnUnlock = document.getElementById('btn-unlock-plot');
+      btnUnlock.disabled = farmData.gold < cost;
+
+      toggleModal(true);
+    }
+
+    window.unlockCurrentPlot = function() {
+      if (activePlotIndex === null) return;
+      const cost = getPlotUnlockCost(activePlotIndex);
+      
+      if (farmData.gold >= cost) {
+        farmData.gold -= cost;
+        farmData.plots[activePlotIndex].isUnlocked = true;
+        updateCurrencyDisplay();
+        saveToFirebase();
+        closeModal();
+        showToast("Mở rộng đất thành công!");
+      }
+    };
+
+    function openActionModal(index) {
+      activePlotIndex = index;
+      document.getElementById('modal-unlock-ui').classList.add('hidden');
+      document.getElementById('modal-farming-ui').classList.remove('hidden');
+      
+      const plot = farmData.plots[index];
+      
+      document.getElementById('modal-plot-info').innerText = UPGRADE_DATA[plot.level].name;
+      document.getElementById('modal-silver-display').innerText = farmData.silver;
+
+      const btnUpgrade = document.getElementById('btn-upgrade');
+      const nextLevel = plot.level + 1;
+      
+      if (nextLevel <= 3) {
+        const upgradeInfo = UPGRADE_DATA[nextLevel];
+        document.getElementById('upgrade-title').innerText = `Lên ${upgradeInfo.name}`;
+        document.getElementById('upgrade-desc').innerText = upgradeInfo.bonusText;
+        document.getElementById('upgrade-cost').innerText = upgradeInfo.cost;
+        
+        btnUpgrade.disabled = farmData.gold < upgradeInfo.cost; 
+        btnUpgrade.classList.remove('hidden');
+      } else {
+        document.getElementById('upgrade-title').innerText = `Tối Đa`;
+        document.getElementById('upgrade-desc').innerText = `Đất tốt nhất rồi`;
+        document.getElementById('upgrade-cost').innerText = "MAX";
+        btnUpgrade.disabled = true;
+      }
+
+      // Hạt giống
+      const seedsContainer = document.getElementById('modal-seeds-container');
+      let seedsHtml = '';
+      let hasSeeds = false;
+
+      Object.values(CROPS).forEach(crop => {
+        if (farmData.seeds[crop.id] > 0) {
+          hasSeeds = true;
+          seedsHtml += `
+            <button onclick="plantSeed('${crop.id}')" class="snap-center flex-shrink-0 w-22 h-26 flex flex-col items-center justify-center p-2 bg-white rounded-xl border-2 border-[#e5e0d8] hover:border-[#10b981] hover:shadow-sm transition-all active:scale-95 group">
+              <span class="text-3xl mb-1 group-hover:scale-115 transition-transform">${crop.icon}</span>
+              <span class="font-bold text-[10px] text-[#451a03] whitespace-nowrap">${crop.name}</span>
+              <span class="text-[9px] bg-[#fef3c7] text-[#92400e] px-1.5 py-0.5 rounded mt-1 font-black border border-[#fde68a]">Còn ${farmData.seeds[crop.id]}</span>
+            </button>
+          `;
+        }
+      });
+
+      if (!hasSeeds) {
+        seedsHtml = `
+          <div class="w-full text-center p-3 bg-white rounded-xl border border-dashed border-gray-300">
+            <p class="text-xs text-gray-500 mb-1.5">Chưa có hạt giống nào!</p>
+            <a href="cuahang.html" class="inline-block bg-[#3b82f6] text-white text-[10px] font-bold px-3 py-1.5 rounded shadow-sm">Mua tại Cửa Hàng</a>
+          </div>
+        `;
+      }
+      seedsContainer.innerHTML = seedsHtml;
+      toggleModal(true);
+    }
+
+    function toggleModal(show) {
+      const modal = document.getElementById('action-modal');
+      const content = document.getElementById('action-modal-content');
+      if(show) {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        content.classList.remove('scale-95');
+      } else {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        content.classList.add('scale-95');
+        activePlotIndex = null;
+      }
+    }
+
+    window.closeModal = () => toggleModal(false);
+
+    window.plantSeed = function(cropId) {
+      if (activePlotIndex === null) return;
+      if (farmData.seeds[cropId] > 0) {
+        farmData.seeds[cropId]--;
+        farmData.plots[activePlotIndex].state = 'growing';
+        farmData.plots[activePlotIndex].crop = cropId;
+        farmData.plots[activePlotIndex].plantTime = Date.now();
+        saveToFirebase();
+        closeModal();
+      }
+    };
+
+    window.upgradeCurrentPlot = function() {
+      if (activePlotIndex === null) return;
+      const plot = farmData.plots[activePlotIndex];
+      const nextLevel = plot.level + 1;
+      
+      if (nextLevel <= 3) {
+        const cost = UPGRADE_DATA[nextLevel].cost;
+        if (farmData.gold >= cost) {
+          farmData.gold -= cost;
+          farmData.plots[activePlotIndex].level = nextLevel;
+          updateCurrencyDisplay();
+          saveToFirebase();
+          closeModal();
+          showToast(`Đã nâng cấp lên ${UPGRADE_DATA[nextLevel].name}!`);
+        }
+      }
+    };
+
+    // --- GAME LOOP ---
+    function gameLoop() {
+      const plotsNodes = document.getElementById('plots-container').children;
+      if (plotsNodes.length === 0) return requestAnimationFrame(gameLoop); 
+      
+      farmData.plots.forEach((plot, index) => {
+        const node = plotsNodes[index];
+        const status = getPlotStatus(plot);
+        
+        const stateFingerprint = `${plot.isUnlocked}_${status.state}_${status.crop}_${plot.level}`;
+
+        if (status.state === 'growing') {
+          const progBar = node.querySelector('.progress-bar');
+          progBar.style.width = `${status.progress}%`;
+        }
+
+        if (node.dataset.lastState !== stateFingerprint) {
+            node.dataset.lastState = stateFingerprint;
+
+            const emoji = node.querySelector('.emoji-container');
+            const progWrap = node.querySelector('.progress-wrapper');
+            const glow = node.querySelector('.ready-glow');
+            const lockedOverlay = node.querySelector('.locked-overlay');
+
+            node.className = `plot-item cursor-pointer overflow-hidden transition-all duration-300`;
+
+            if (!plot.isUnlocked) {
+              node.classList.add('plot-locked');
+              lockedOverlay.classList.remove('hidden');
+              emoji.innerHTML = '';
+              progWrap.classList.add('hidden');
+              glow.classList.add('hidden');
+            } 
+            else {
+              node.classList.add(`plot-lv${plot.level}`, 'hover:-translate-y-1', 'shadow-sm', 'hover:shadow-md');
+              lockedOverlay.classList.add('hidden');
+
+              if (status.state === 'empty') {
+                emoji.innerHTML = '';
+                progWrap.classList.add('hidden');
+                glow.classList.add('hidden');
+                node.classList.remove('animate-pulse');
+              } 
+              else if (status.state === 'growing') {
+                emoji.innerHTML = '🌱';
+                emoji.className = 'emoji-container absolute inset-0 flex items-center justify-center pointer-events-none text-2xl sm:text-3xl animate-bounce drop-shadow-md z-10';
+                progWrap.classList.remove('hidden');
+                glow.classList.add('hidden');
+                node.classList.remove('animate-pulse');
+              } 
+              else if (status.state === 'ready') {
+                const icon = CROPS[status.crop].icon;
+                emoji.innerHTML = icon;
+                emoji.className = 'emoji-container absolute inset-0 flex items-center justify-center pointer-events-none text-4xl sm:text-5xl filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)] z-20 animate-pop';
+                glow.classList.remove('hidden', 'opacity-0');
+                node.classList.add('animate-pulse'); 
+                progWrap.classList.add('hidden');
+              }
+            }
+        }
+      });
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // --- UTILS ---
+    function updateCurrencyDisplay() {
+      if (farmData.silver === undefined) farmData.silver = 200;
+      if (farmData.gold === undefined) {
+        farmData.gold = farmData.money || 50;
+        delete farmData.money;
+      }
+      document.getElementById('silver-display').innerText = farmData.silver;
+      document.getElementById('gold-display').innerText = farmData.gold;
+    }
+
+    let toastTimeout;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      toast.classList.remove('opacity-0', 'translate-y-[-15px]');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-[-15px]');
+      }, 2500);
+    }
+
+    // --- FIREBASE SYNC ---
+    async function saveToFirebase() {
+      if (!user || !db) return;
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'nongtraiheocon';
+      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'farmData');
+      try { await setDoc(docRef, farmData); } catch(e) {}
+    }
+
+    try {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+
+      const initAuth = async () => {
+        try {
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } else {
+            await signInAnonymously(auth);
+          }
+        } catch (e) {}
+      };
+      initAuth();
+
+      onAuthStateChanged(auth, (currentUser) => {
+        user = currentUser;
+        if (user) {
+          const appId = typeof __app_id !== 'undefined' ? __app_id : 'nongtraiheocon';
+          const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'farmData');
+          
+          onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (data.plots) {
+                data.plots = data.plots.map((p, i) => ({
+                  ...p, 
+                  level: p.level || 1,
+                  isUnlocked: p.isUnlocked !== undefined ? p.isUnlocked : (i === 0 ? true : false)
+                }));
+              }
+              farmData = data;
+            } else {
+              setDoc(docRef, farmData);
+            }
+            updateCurrencyDisplay();
+          });
+        }
+      });
+    } catch(e) { console.error("Offline mode"); }
+
+    // Start
+    initDOM();
+    requestAnimationFrame(gameLoop);
+
+  </script>
+</body>
+</html>
