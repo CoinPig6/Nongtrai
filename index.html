@@ -36,7 +36,7 @@
       border-radius: 10px;
     }
 
-    /* Viền Luống Đất cứng cáp */
+    /* Viền Luống Đất */
     .plot-lv1 { border: 3px solid #a16207; border-radius: 14px; } 
     .plot-lv2 { border: 3px solid #4d7c0f; box-shadow: 0 0 10px rgba(77, 124, 15, 0.5); border-radius: 14px; } 
     .plot-lv3 { border: 3px solid #059669; box-shadow: 0 0 14px rgba(5, 150, 105, 0.7); border-radius: 14px; } 
@@ -162,6 +162,8 @@
           <i class="ph-fill ph-plant text-lg sm:text-xl"></i>
         </div>
         <span>Heo Con</span>
+        <!-- Nhãn đồng bộ mây cực xịn -->
+        <span id="cloud-indicator" class="w-2.5 h-2.5 rounded-full bg-gray-300 shadow-[0_0_8px_rgba(0,0,0,0.1)]" title="Đang đồng bộ..."></span>
       </div>
       
       <!-- Box Tiền Tệ -->
@@ -273,10 +275,12 @@
     
     // --- DATA GAME ---
     const CROPS = {
-      wheat: { id: 'wheat', name: 'Lúa mì', icon: '🌾', growTime: 15000 },          // 15 giây
-      tomato: { id: 'tomato', name: 'Cà chua', icon: '🍅', growTime: 300000 },       // 5 phút
-      corn: { id: 'corn', name: 'Ngô', icon: '🌽', growTime: 1800000 },            // 30 phút
-      strawberry: { id: 'strawberry', name: 'Dâu tây', icon: '🍓', growTime: 7200000 },  // 2 giờ
+      wheat: { id: 'wheat', name: 'Lúa mì', icon: '🌾', growTime: 15000 },
+      tomato: { id: 'tomato', name: 'Cà chua', icon: '🍅', growTime: 300000 },
+      corn: { id: 'corn', name: 'Ngô', icon: '🌽', growTime: 1800000 },
+      radish: { id: 'radish', name: 'Củ cải', icon: '🥕', growTime: 3600000 },          // 1 giờ (Mới)
+      strawberry: { id: 'strawberry', name: 'Dâu tây', icon: '🍓', growTime: 7200000 },
+      watermelon: { id: 'watermelon', name: 'Dưa hấu', icon: '🍉', growTime: 14400000 }, // 4 giờ (Mới)
     };
 
     const UPGRADE_DATA = {
@@ -285,14 +289,13 @@
       3: { name: "Luống Đất Sinh Học", cost: 2500, bonusText: "Nhanh hơn 40%", timeMultiplier: 0.6 }
     };
 
-    // Điều chỉnh giá mở khoá ô đất (phù hợp với thu hoạch Dâu tây 2000 vàng)
     const getPlotUnlockCost = (index) => index * 150;
 
     const INITIAL_FARM = {
       silver: 200, 
       gold: 50,    
-      seeds: { wheat: 5, tomato: 2, corn: 0, strawberry: 0 },
-      harvested: { wheat: 0, tomato: 0, corn: 0, strawberry: 0 },
+      seeds: { wheat: 5, tomato: 2, corn: 0, radish: 0, strawberry: 0, watermelon: 0 },
+      harvested: { wheat: 0, tomato: 0, corn: 0, radish: 0, strawberry: 0, watermelon: 0 },
       plots: Array(16).fill(null).map((_, index) => ({ 
         state: 'empty', crop: null, plantTime: null, level: 1, isUnlocked: index === 0 ? true : false
       }))
@@ -489,7 +492,7 @@
           hasSeeds = true;
           seedsHtml += `
             <button onclick="plantSeed('${crop.id}')" class="snap-center flex-shrink-0 w-22 h-26 flex flex-col items-center justify-center p-2 bg-white rounded-xl border-2 border-[#e5e0d8] hover:border-[#10b981] hover:shadow-sm transition-all active:scale-95 group">
-              <span class="text-3xl mb-1 group-hover:scale-115 transition-transform">${crop.icon}</span>
+              <span class="text-3xl mb-1 group-hover:scale-110 transition-transform">${crop.icon}</span>
               <span class="font-bold text-[10px] text-[#451a03] whitespace-nowrap">${crop.name}</span>
               <span class="text-[9px] bg-[#fef3c7] text-[#92400e] px-1.5 py-0.5 rounded mt-1 font-black border border-[#fde68a]">Còn ${farmData.seeds[crop.id]}</span>
             </button>
@@ -628,8 +631,16 @@
       requestAnimationFrame(gameLoop);
     }
 
-    // --- UTILS ---
+    // --- UTILS & DATA MIGRATION HELPER ---
     function updateCurrencyDisplay() {
+      // Đảm bảo không bị thiếu 2 loại hạt mới khi nâng cấp app
+      if (!farmData.seeds) farmData.seeds = {};
+      if (!farmData.harvested) farmData.harvested = {};
+      Object.keys(CROPS).forEach(cropId => {
+        if (farmData.seeds[cropId] === undefined) farmData.seeds[cropId] = 0;
+        if (farmData.harvested[cropId] === undefined) farmData.harvested[cropId] = 0;
+      });
+
       if (farmData.silver === undefined) farmData.silver = 200;
       if (farmData.gold === undefined) {
         farmData.gold = farmData.money || 50;
@@ -655,7 +666,11 @@
       if (!user || !db) return;
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'nongtraiheocon';
       const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'saveData', 'farm');
-      try { await setDoc(docRef, farmData); } catch(e) {}
+      try { 
+        await setDoc(docRef, farmData); 
+      } catch(e) {
+        console.error("Lỗi khi lưu lên Firebase", e);
+      }
     }
 
     try {
@@ -681,8 +696,10 @@
           const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'saveData', 'farm');
           
           onSnapshot(docRef, (docSnap) => {
+            const indicator = document.getElementById('cloud-indicator');
             if (docSnap.exists()) {
               const data = docSnap.data();
+              // Tự động kiểm tra và nâng cấp cấu trúc data cũ
               if (data.plots) {
                 data.plots = data.plots.map((p, i) => ({
                   ...p, 
@@ -691,10 +708,20 @@
                 }));
               }
               farmData = data;
+              if (indicator) {
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]';
+                indicator.title = "Đã đồng bộ lên đám mây!";
+              }
             } else {
               setDoc(docRef, farmData);
             }
             updateCurrencyDisplay();
+          }, (err) => {
+            const indicator = document.getElementById('cloud-indicator');
+            if (indicator) {
+              indicator.className = 'w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]';
+              indicator.title = "Lỗi kết nối đồng bộ.";
+            }
           });
         }
       });
